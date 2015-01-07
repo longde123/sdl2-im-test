@@ -95,23 +95,23 @@ static void
 redraw(const struct Screen *screen) {
     // ** background **
 
-    SDL_SetRenderDrawColor(screen->renderer, 0, 64, 232, 255);
+    SDL_SetRenderDrawColor(screen->renderer, 240, 240, 240, 255);
     SDL_RenderClear(screen->renderer);
 
     // ** text field **
 
     // border
-    SDL_SetRenderDrawColor(screen->renderer, 255, 255, 255, 255);
+    SDL_SetRenderDrawColor(screen->renderer, 96, 96, 96, 255);
     SDL_RenderDrawRect(screen->renderer, &screen->field.rect);
 
     SDL_Point inner_pos = {screen->field.rect.x + screen->field.padding,
                            screen->field.rect.y + screen->field.padding};
 
     // actual text
-    SDL_Color color_white = {255, 255, 255};
+    SDL_Color text_color = {0, 0, 0};
     if (screen->field.text[0]) {
         draw_text(screen->renderer, &inner_pos,
-                  screen->font, screen->field.text, color_white);
+                  screen->font, screen->field.text, text_color);
     }
 
     int caretx = inner_pos.x + screen->field.text_width;
@@ -124,7 +124,7 @@ redraw(const struct Screen *screen) {
         // text
         SDL_Point pos = {inner_pos.x + screen->field.text_width, inner_pos.y};
         draw_text(screen->renderer, &pos, screen->font,
-                  screen->field.composition, color_white);
+                  screen->field.composition, text_color);
 
         // underline
         int x = inner_pos.x + screen->field.text_width;
@@ -151,7 +151,7 @@ main() {
     TTF_Init();
     atexit(exit_handler);
 
-    SDL_Window *window = SDL_CreateWindow("SDL2 CJK Input", SDL_WINDOWPOS_UNDEFINED,
+    SDL_Window *window = SDL_CreateWindow("SDL2 Japanese Input", SDL_WINDOWPOS_UNDEFINED,
                                           SDL_WINDOWPOS_UNDEFINED, 640, 240,
                                           SDL_WINDOW_OPENGL);
     if (!window) {
