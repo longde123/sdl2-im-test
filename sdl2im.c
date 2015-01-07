@@ -201,7 +201,7 @@ exit_handler() {
 static const char *TTF_PATH = "ume-tgo4.ttf";
 
 int
-main() {
+main(int argc, char **argv) {
     SDL_Init(SDL_INIT_VIDEO);
     TTF_Init();
     atexit(exit_handler);
