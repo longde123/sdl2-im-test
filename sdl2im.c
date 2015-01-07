@@ -13,8 +13,7 @@ struct TextField {
     size_t text_length;
     int text_width;
     char *composition;
-    int composition_start;
-    int composition_length;
+    size_t composition_length;
 };
 
 struct Screen {
@@ -68,7 +67,7 @@ redraw(const struct Screen *screen) {
 
     // actual text
     SDL_Color color_white = {255, 255, 255};
-    if (strlen(screen->field.text)) {
+    if (screen->field.text[0]) {
         draw_text(screen->renderer, (SDL_Point*)&screen->field.rect,
                   screen->font, screen->field.text, color_white);
     }
@@ -77,34 +76,8 @@ redraw(const struct Screen *screen) {
 
     // composition text
     if (screen->field.composition[0]) {
-        int width_head, width_focused, width_tail, width_all;
-
-        // #1: characters before the focused part of the text
-        char *sep = screen->field.composition + screen->field.composition_start;
-        char original = *sep;
-        *sep = '\0';
-        TTF_SizeUTF8(screen->font, screen->field.composition, &width_head, NULL);
-        *sep = original;
-
-        // #2: focused text
-        sep = screen->field.composition +
-              screen->field.composition_start +
-              screen->field.composition_length;
-        original = *sep;
-        *sep = '\0';
-        TTF_SizeUTF8(screen->font,
-                     screen->field.composition + screen->field.composition_start,
-                     &width_focused, NULL);
-        *sep = original;
-
-        // #3: characters after the focused part
-        TTF_SizeUTF8(screen->font,
-                     screen->field.composition + screen->field.composition_start +
-                                                 screen->field.composition_length,
-                     &width_tail, NULL);
-
-        TTF_SizeUTF8(screen->font, screen->field.composition, &width_all, NULL);
-        //assert(width_all == width_head + width_focused + width_tail);
+        int width;
+        TTF_SizeUTF8(screen->font, screen->field.composition, &width, NULL);
 
         // text
         SDL_Point pos = {screen->field.rect.x + screen->field.text_width,
@@ -112,18 +85,12 @@ redraw(const struct Screen *screen) {
         draw_text(screen->renderer, &pos, screen->font,
                   screen->field.composition, color_white);
 
-        // underlines
+        // underline
         int x = screen->field.rect.x + screen->field.text_width;
         int h = screen->field.rect.y + TTF_FontHeight(screen->font);
-        SDL_RenderDrawLine(screen->renderer, x, h, x + width_head, h);
-        SDL_RenderDrawLine(screen->renderer, x + width_head, h,
-                           x + width_head + width_focused, h);
-        SDL_RenderDrawLine(screen->renderer, x + width_head, h - 1,
-                           x + width_head + width_focused, h - 1);
-        SDL_RenderDrawLine(screen->renderer, x + width_head + width_focused, h,
-                           x + width_head + width_focused + width_tail, h);
+        SDL_RenderDrawLine(screen->renderer, x, h, x + width, h);
 
-        caretx += width_all;
+        caretx += width;
     }
 
     // caret
@@ -164,7 +131,6 @@ main() {
     TTF_SizeUTF8(screen.font, screen.field.text,
                  &screen.field.text_width, NULL);
     screen.field.composition = calloc(128, sizeof(char));;
-    screen.field.composition_start = 0;
     screen.field.composition_length = 0;
 
     redraw(&screen);
@@ -181,18 +147,25 @@ main() {
         switch (e.type) {
         case SDL_QUIT:
             goto out;
-        case SDL_TEXTEDITING:
-            assert(strlen(e.edit.text) < 127);
-            strcpy(screen.field.composition, e.edit.text);
-            screen.field.composition_start = e.edit.start;
-            screen.field.composition_length = e.edit.length;
+        case SDL_TEXTEDITING: {
+            size_t len = strlen(e.edit.text);
+            if (!e.edit.start) {
+                assert(len < 127);
+                strcpy(screen.field.composition, e.edit.text);
+                screen.field.composition_length = len;
+            } else {
+                assert(screen.field.composition_length + len < 127);
+                strcpy(screen.field.composition + screen.field.composition_length,
+                       e.edit.text);
+                screen.field.composition_length += len;
+            }
             dump_textediting(&e.edit);
             redraw(&screen);
             break;
+        }
         case SDL_TEXTINPUT:
-            if (screen.field.composition) {
-                screen.field.composition = "";
-                screen.field.composition_start = 0;
+            if (screen.field.composition[0]) {
+                screen.field.composition[0] = '\0';
                 screen.field.composition_length = 0;
             }
             strcat(screen.field.text, e.text.text);
