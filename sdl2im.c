@@ -25,6 +25,18 @@ struct TextField {
 };
 
 static void
+text_field_update_text_info(struct TextField* field) {
+    TTF_SizeUTF8(field->font, field->text, &field->text_width, NULL);
+
+    SDL_Rect rect;
+    rect.x = field->rect.x + field->text_width;
+    rect.y = field->rect.y;
+    rect.w = 1;
+    rect.h = field->rect.h;
+    SDL_SetTextInputRect(&rect);
+}
+
+static void
 text_field_create(int x, int y, int width, int height,
                   TTF_Font *font, struct TextField *field) {
     field->rect = ((SDL_Rect){ x, y, width, height });
@@ -40,18 +52,7 @@ text_field_create(int x, int y, int width, int height,
     field->composition_bufsize = 128;
     field->composition = calloc(field->composition_bufsize, sizeof(char));
     field->composition_length = 0;
-}
-
-static void
-text_field_update_text_info(struct TextField* field) {
-    TTF_SizeUTF8(field->font, field->text, &field->text_width, NULL);
-
-    SDL_Rect rect;
-    rect.x = field->rect.x + field->text_width;
-    rect.y = field->rect.y;
-    rect.w = field->rect.w - field->text_width;
-    rect.h = field->rect.h;
-    SDL_SetTextInputRect(&rect);
+    text_field_update_text_info(field);
 }
 
 struct Screen {
@@ -170,7 +171,6 @@ main() {
     redraw(&screen);
 
     SDL_StartTextInput();
-    SDL_SetTextInputRect(&screen.field.rect);
     for (;;) {
         SDL_Event e;
         int ok = SDL_WaitEvent(&e);
