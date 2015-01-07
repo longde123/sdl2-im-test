@@ -24,6 +24,36 @@ struct TextField {
     size_t composition_length;
 };
 
+static void
+text_field_create(int x, int y, int width, int height,
+                  TTF_Font *font, struct TextField *field) {
+    field->rect = ((SDL_Rect){ x, y, width, height });
+    field->padding = 2;
+    if (!height) {
+        field->rect.h = TTF_FontHeight(font) + field->padding * 2;
+    }
+    field->font = font;
+    field->text_bufsize = 128;
+    field->text = calloc(field->text_bufsize, sizeof(char));
+    field->text_len = strlen(field->text);
+    field->text_width = 0;
+    field->composition_bufsize = 128;
+    field->composition = calloc(field->composition_bufsize, sizeof(char));
+    field->composition_length = 0;
+}
+
+static void
+text_field_update_text_info(struct TextField* field) {
+    TTF_SizeUTF8(field->font, field->text, &field->text_width, NULL);
+
+    SDL_Rect rect;
+    rect.x = field->rect.x + field->text_width;
+    rect.y = field->rect.y;
+    rect.w = field->rect.w - field->text_width;
+    rect.h = field->rect.h;
+    SDL_SetTextInputRect(&rect);
+}
+
 struct Screen {
     SDL_Renderer *renderer;
     TTF_Font *font;
@@ -112,18 +142,6 @@ redraw(const struct Screen *screen) {
     SDL_RenderPresent(screen->renderer);
 }
 
-static void
-text_field_update_text_info(struct TextField* field) {
-    TTF_SizeUTF8(field->font, field->text, &field->text_width, NULL);
-
-    SDL_Rect rect;
-    rect.x = field->rect.x + field->text_width;
-    rect.y = field->rect.y;
-    rect.w = field->rect.w - field->text_width;
-    rect.h = field->rect.h;
-    SDL_SetTextInputRect(&rect);
-}
-
 const char *TTF_PATH = "ume-tgo4.ttf";
 
 int
@@ -148,20 +166,7 @@ main() {
         exit(EXIT_FAILURE);
     }
 
-    screen.field.font = screen.font;
-    screen.field.padding = 2;
-    screen.field.rect = ((struct SDL_Rect){ 20, 20, 600, 0 });
-    screen.field.rect.h = TTF_FontHeight(screen.font) + screen.field.padding * 2;
-    screen.field.text_bufsize = 128;
-    screen.field.text = calloc(screen.field.text_bufsize, sizeof(char));
-    screen.field.text_len = strlen(screen.field.text);
-    //strcpy(screen.field.text, "あーあ。");
-    TTF_SizeUTF8(screen.font, screen.field.text,
-                 &screen.field.text_width, NULL);
-    screen.field.composition_bufsize = 128;
-    screen.field.composition = calloc(screen.field.composition_bufsize, sizeof(char));
-    screen.field.composition_length = 0;
-
+    text_field_create(20, 20, 600, 0, screen.font, &screen.field);
     redraw(&screen);
 
     SDL_StartTextInput();
