@@ -240,6 +240,11 @@ main(int argc, char **argv) {
             goto out;
         case SDL_TEXTEDITING: {
             size_t len = strlen(e.edit.text);
+#if defined(_WIN32) || defined(__CYGWIN__)
+            assert(len < 127);
+            strcpy(field->composition, e.edit.text);
+            field->composition_length = len;
+#else
             if (!e.edit.start) {
                 assert(len < 127);
                 strcpy(field->composition, e.edit.text);
@@ -250,6 +255,7 @@ main(int argc, char **argv) {
                        e.edit.text);
                 field->composition_length += len;
             }
+#endif
             printf("{timestamp=%d, \"%s\", start=%d, length=%d}\n",
                    e.edit.timestamp, e.edit.text, e.edit.start, e.edit.length);
             screen_render(screen);
