@@ -4,15 +4,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <unicode/utf8.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 
 struct TextField {
     SDL_Rect rect;
+    int padding;
+    TTF_Font* font;
+
     char *text;
-    size_t text_length;
+    size_t text_bufsize;
+    size_t text_len;
     int text_width;
+
     char *composition;
+    size_t composition_bufsize;
     size_t composition_length;
 };
 
@@ -65,14 +73,17 @@ redraw(const struct Screen *screen) {
     SDL_SetRenderDrawColor(screen->renderer, 255, 255, 255, 255);
     SDL_RenderDrawRect(screen->renderer, &screen->field.rect);
 
+    SDL_Point inner_pos = {screen->field.rect.x + screen->field.padding,
+                           screen->field.rect.y + screen->field.padding};
+
     // actual text
     SDL_Color color_white = {255, 255, 255};
     if (screen->field.text[0]) {
-        draw_text(screen->renderer, (SDL_Point*)&screen->field.rect,
+        draw_text(screen->renderer, &inner_pos,
                   screen->font, screen->field.text, color_white);
     }
 
-    int caretx = screen->field.rect.x + screen->field.text_width;
+    int caretx = inner_pos.x + screen->field.text_width;
 
     // composition text
     if (screen->field.composition[0]) {
@@ -80,25 +91,37 @@ redraw(const struct Screen *screen) {
         TTF_SizeUTF8(screen->font, screen->field.composition, &width, NULL);
 
         // text
-        SDL_Point pos = {screen->field.rect.x + screen->field.text_width,
-                         screen->field.rect.y};
+        SDL_Point pos = {inner_pos.x + screen->field.text_width, inner_pos.y};
         draw_text(screen->renderer, &pos, screen->font,
                   screen->field.composition, color_white);
 
         // underline
-        int x = screen->field.rect.x + screen->field.text_width;
-        int h = screen->field.rect.y + TTF_FontHeight(screen->font);
+        int x = inner_pos.x + screen->field.text_width;
+        int h = inner_pos.y + TTF_FontHeight(screen->font);
         SDL_RenderDrawLine(screen->renderer, x, h, x + width, h);
 
         caretx += width;
     }
 
     // caret
+    int bottom = screen->field.rect.y + screen->field.rect.h;
     SDL_RenderDrawLine(screen->renderer,
-                       caretx, screen->field.rect.y + 1,
-                       caretx, screen->field.rect.y + screen->field.rect.h - 1);
+                       caretx, inner_pos.y,
+                       caretx, bottom - screen->field.padding);
 
     SDL_RenderPresent(screen->renderer);
+}
+
+static void
+text_field_update_text_info(struct TextField* field) {
+    TTF_SizeUTF8(field->font, field->text, &field->text_width, NULL);
+
+    SDL_Rect rect;
+    rect.x = field->rect.x + field->text_width;
+    rect.y = field->rect.y;
+    rect.w = field->rect.w - field->text_width;
+    rect.h = field->rect.h;
+    SDL_SetTextInputRect(&rect);
 }
 
 const char *TTF_PATH = "ume-tgo4.ttf";
@@ -124,13 +147,19 @@ main() {
         fprintf(stderr, "FAIL: Couldn't open %s.", TTF_PATH);
         exit(EXIT_FAILURE);
     }
-    screen.field.rect = ((struct SDL_Rect){ 20, 20, 600, 24 });
-    screen.field.text = calloc(128, sizeof(char));
+
+    screen.field.font = screen.font;
+    screen.field.padding = 2;
+    screen.field.rect = ((struct SDL_Rect){ 20, 20, 600, 0 });
+    screen.field.rect.h = TTF_FontHeight(screen.font) + screen.field.padding * 2;
+    screen.field.text_bufsize = 128;
+    screen.field.text = calloc(screen.field.text_bufsize, sizeof(char));
+    screen.field.text_len = strlen(screen.field.text);
     //strcpy(screen.field.text, "あーあ。");
-    screen.field.text_length = strlen(screen.field.text);
     TTF_SizeUTF8(screen.font, screen.field.text,
                  &screen.field.text_width, NULL);
-    screen.field.composition = calloc(128, sizeof(char));;
+    screen.field.composition_bufsize = 128;
+    screen.field.composition = calloc(screen.field.composition_bufsize, sizeof(char));
     screen.field.composition_length = 0;
 
     redraw(&screen);
@@ -169,20 +198,21 @@ main() {
                 screen.field.composition_length = 0;
             }
             strcat(screen.field.text, e.text.text);
-            screen.field.text_length += strlen(screen.field.text);
-            TTF_SizeUTF8(screen.font, screen.field.text,
-                         &screen.field.text_width, NULL);
-
-            SDL_Rect rect;
-            rect.x = screen.field.rect.x + screen.field.text_width;
-            rect.y = screen.field.rect.y;
-            rect.w = screen.field.rect.w - screen.field.text_width;
-            rect.h = screen.field.rect.h;
-            SDL_SetTextInputRect(&rect);
-
+            screen.field.text_len = strlen(screen.field.text);
+            text_field_update_text_info(&screen.field);
             redraw(&screen);
             break;
         }
+        case SDL_KEYUP:
+            switch (e.key.keysym.sym) {
+            case SDLK_BACKSPACE:
+                U8_BACK_1(screen.field.text, 0, screen.field.text_len);
+                screen.field.text[screen.field.text_len] = '\0';
+                text_field_update_text_info(&screen.field);
+                redraw(&screen);
+                break;
+            }
+            break;
         };
     }
 out:

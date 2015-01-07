@@ -1,5 +1,5 @@
 BIN=sdl2im
-LIBS=sdl2
+LIBS=sdl2 icu-uc
 
 all: $(BIN)
 
