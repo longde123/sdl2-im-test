@@ -174,12 +174,6 @@ screen_destroy(struct Screen *this) {
 }
 
 static void
-exit_handler() {
-    TTF_Quit();
-    SDL_Quit();
-}
-
-static void
 render(struct UIElementHeader *element, SDL_Renderer *renderer) {
     struct UIElementHeader *sibling;
 
@@ -198,7 +192,13 @@ screen_render(struct Screen *screen) {
     SDL_RenderPresent(screen->renderer);
 }
 
-const char *TTF_PATH = "ume-tgo4.ttf";
+static void
+exit_handler() {
+    TTF_Quit();
+    SDL_Quit();
+}
+
+static const char *TTF_PATH = "ume-tgo4.ttf";
 
 int
 main() {
