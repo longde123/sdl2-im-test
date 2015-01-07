@@ -163,7 +163,7 @@ main() {
             redraw(&screen);
             break;
         }
-        case SDL_TEXTINPUT:
+        case SDL_TEXTINPUT: {
             if (screen.field.composition[0]) {
                 screen.field.composition[0] = '\0';
                 screen.field.composition_length = 0;
@@ -172,8 +172,17 @@ main() {
             screen.field.text_length += strlen(screen.field.text);
             TTF_SizeUTF8(screen.font, screen.field.text,
                          &screen.field.text_width, NULL);
+
+            SDL_Rect rect;
+            rect.x = screen.field.rect.x + screen.field.text_width;
+            rect.y = screen.field.rect.y;
+            rect.w = screen.field.rect.w - screen.field.text_width;
+            rect.h = screen.field.rect.h;
+            SDL_SetTextInputRect(&rect);
+
             redraw(&screen);
             break;
+        }
         };
     }
 out:
