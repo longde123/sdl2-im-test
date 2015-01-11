@@ -256,9 +256,9 @@ main(int argc, char **argv) {
                 field->composition_length += len;
             }
 #endif
-            printf("{timestamp=%d, \"%s\", start=%d, length=%d}\n",
-                   e.edit.timestamp, e.edit.text, e.edit.start, e.edit.length);
             screen_render(screen);
+            printf("SDL_TEXTEDITING {timestamp=%d, \"%s\", start=%d, length=%d}\n",
+                   e.edit.timestamp, e.edit.text, e.edit.start, e.edit.length);
             break;
         }
         case SDL_TEXTINPUT: {
@@ -270,6 +270,9 @@ main(int argc, char **argv) {
             field->text_len = strlen(field->text);
             text_field_update_text_info(field);
             screen_render(screen);
+
+            printf("SDL_TEXTINPUT {timestamp=%d, \"%s\"}\n",
+                   e.edit.timestamp, e.edit.text);
             break;
         }
         case SDL_KEYUP:
