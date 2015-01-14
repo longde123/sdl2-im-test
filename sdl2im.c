@@ -202,7 +202,7 @@ exit_handler() {
 static const char *TTF_PATH = "ume-tgo4.ttf";
 
 int
-main() {
+main(int argc, char **argv) {
     SDL_Init(SDL_INIT_VIDEO);
     TTF_Init();
     atexit(exit_handler);
@@ -242,6 +242,11 @@ main() {
             goto out;
         case SDL_TEXTEDITING: {
             size_t len = strlen(e.edit.text);
+#if defined(_WIN32) || defined(__CYGWIN__)
+            assert(len < 127);
+            strcpy(field->composition, e.edit.text);
+            field->composition_length = len;
+#else
             if (!e.edit.start) {
                 assert(len < 127);
                 strcpy(field->composition, e.edit.text);
@@ -252,9 +257,10 @@ main() {
                        e.edit.text);
                 field->composition_length += len;
             }
-            printf("{timestamp=%d, \"%s\", start=%d, length=%d}\n",
-                   e.edit.timestamp, e.edit.text, e.edit.start, e.edit.length);
+#endif
             screen_render(screen);
+            printf("SDL_TEXTEDITING {timestamp=%d, \"%s\", start=%d, length=%d}\n",
+                   e.edit.timestamp, e.edit.text, e.edit.start, e.edit.length);
             break;
         }
         case SDL_TEXTINPUT: {
@@ -266,6 +272,9 @@ main() {
             field->text_len = strlen(field->text);
             text_field_update_text_info(field);
             screen_render(screen);
+
+            printf("SDL_TEXTINPUT {timestamp=%d, \"%s\"}\n",
+                   e.edit.timestamp, e.edit.text);
             break;
         }
         case SDL_KEYUP:
