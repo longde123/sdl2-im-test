@@ -7,6 +7,7 @@
 
 #include <unicode/utf8.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_hints.h>
 #include <SDL2/SDL_ttf.h>
 
 typedef void (*UIElementOp_Render)(void *this, SDL_Renderer *renderer);
@@ -205,6 +206,7 @@ main() {
     SDL_Init(SDL_INIT_VIDEO);
     TTF_Init();
     atexit(exit_handler);
+    SDL_SetHint(SDL_HINT_IME_INTERNAL_EDITING, "1");
 
     SDL_Window *window =
         SDL_CreateWindow("SDL2 Japanese Input",
